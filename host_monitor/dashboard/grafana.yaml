@@ -1,0 +1,23 @@
+image:
+  registry: registry.lqingcloud.cn
+  repository: library/grafana
+  tag: "12.0.0"
+testFramework:
+  enabled: false
+initChownData:
+  enabled: false
+downloadDashboardsImage:
+  registry: registry.lqingcloud.cn
+  repository: library/curl
+  tag: 8.9.1
+
+service:
+  enabled: true
+  type: NodePort
+
+persistence:
+  type: pvc
+  enabled: true
+
+adminUser: admin
+adminPassword: admin

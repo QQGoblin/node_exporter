@@ -1,0 +1,25 @@
+[Unit]
+Description=Host monitor Exporter
+Requires=host-monitor.socket
+
+[Service]
+User=root
+# Fallback when environment file does not exist
+Environment=OPTIONS=
+EnvironmentFile=-/etc/sysconfig/host_monitor.env
+ExecStart=/usr/local/bin/host_monitor $OPTIONS \
+--web.systemd-socket \
+--web.listen-address=:16777 \
+--collector.disable-defaults \
+--collector.cpu \
+--collector.meminfo \
+--collector.vmstat \
+--collector.vmstat.fields=^(oom_kill|pg.*fault|pswp|pgscan|pgsteal).* \
+--collector.loadavg \
+--collector.diskstats.device-exclude= \
+--collector.diskstats.device-include=^(sdc|sdb|sdc|nvme*)$ \
+--collector.kvm_guest
+
+
+[Install]
+WantedBy=multi-user.target
