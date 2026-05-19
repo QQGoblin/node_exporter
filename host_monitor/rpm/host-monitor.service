@@ -16,9 +16,12 @@ ExecStart=/usr/local/bin/host_monitor $OPTIONS \
 --collector.vmstat \
 --collector.vmstat.fields=^(oom_kill|pg.*fault|pswp|pgscan|pgsteal).* \
 --collector.loadavg \
+--collector.pressure \
+--collector.diskstats \
 --collector.diskstats.device-exclude= \
---collector.diskstats.device-include=^(sdc|sdb|sdc|nvme*)$ \
---collector.kvm_guest
+--collector.diskstats.device-include=^(sda|sdb|sdc|nvme.*)$ \
+--collector.kvm_guest \
+--collector.pressure_stat
 
 
 [Install]
