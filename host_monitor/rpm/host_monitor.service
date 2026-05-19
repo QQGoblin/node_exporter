@@ -1,0 +1,21 @@
+[Unit]
+Description=HMON Node Exporter
+Requires=hmon_node_exporter.socket
+
+[Service]
+User=root
+# Fallback when environment file does not exist
+Environment=OPTIONS=
+EnvironmentFile=-/etc/sysconfig/node_exporter.env
+ExecStart=/usr/local/bin/node_exporter $OPTIONS --web.systemd-socket \
+--collector.disable-defaults \
+--collector.cpu \
+--collector.meminfo \
+--collector.vmstat \
+--collector.vmstat.fields="^(oom_kill|pg.*fault|pswp|pgscan|pgsteal).*" \
+--collector.loadavg \
+--collector.diskstats.device-exclude= \
+--collector.diskstats.device-include=^(sdc|sdb|sdc|nvme*)$
+
+[Install]
+WantedBy=multi-user.target
