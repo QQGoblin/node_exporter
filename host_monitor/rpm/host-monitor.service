@@ -18,7 +18,6 @@ ExecStart=/usr/local/bin/host_monitor $OPTIONS \
 --collector.loadavg \
 --collector.pressure \
 --collector.diskstats \
---collector.diskstats.device-exclude= \
 --collector.diskstats.device-include=^(sda|sdb|sdc|nvme.*)$ \
 --collector.kvm_guest \
 --collector.pressure_stat

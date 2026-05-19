@@ -34,7 +34,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const pressureStatSubsystem = "pressureStatValues"
+const pressureStatSubsystem = "pressure_stat"
 
 type pressureStatValues struct {
 	total uint64
@@ -59,7 +59,7 @@ func init() {
 func NewPressureStatCollector(logger *slog.Logger) (Collector, error) {
 	return &pressureStatCollector{
 		total: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, pressureStatSubsystem, "total_seconds_total"),
+			prometheus.BuildFQName(namespace, pressureStatSubsystem, "seconds_total"),
 			"Total pressure stall time in seconds reported by /proc/pressure/stat.",
 			[]string{"resource", "scope"}, nil,
 		),
