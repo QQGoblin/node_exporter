@@ -28,22 +28,17 @@ import (
 	"log/slog"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/procfs"
 )
 
 const pressureStatSubsystem = "pressure_stat"
 
-type pressureStatValues struct {
-	total uint64
-}
-
 type pressureStatResource struct {
-	name string
-	some *pressureStatValues
-	full *pressureStatValues
+	name  string
+	stats procfs.PSIStats
 }
 
 type pressureStatCollector struct {
@@ -81,12 +76,12 @@ func (c *pressureStatCollector) Update(ch chan<- prometheus.Metric) error {
 	foundResources := 0
 	for _, resource := range resources {
 		c.logger.Debug("collecting local pressure statistics for resource", "resource", resource.name)
-		for scope, values := range map[string]*pressureStatValues{"some": resource.some, "full": resource.full} {
+		for scope, values := range map[string]*procfs.PSILine{"some": resource.stats.Some, "full": resource.stats.Full} {
 			if values == nil {
 				continue
 			}
 
-			ch <- prometheus.MustNewConstMetric(c.total, prometheus.CounterValue, float64(values.total)/1000.0/1000.0, resource.name, scope)
+			ch <- prometheus.MustNewConstMetric(c.total, prometheus.CounterValue, float64(values.Total)/1000.0/1000.0, resource.name, scope)
 			foundResources++
 		}
 	}
@@ -131,16 +126,16 @@ func parsePressureStatFile(r io.Reader) ([]pressureStatResource, error) {
 			return nil, fmt.Errorf("missing resource header before line %q", line)
 		}
 
-		scope, values, err := parsePressureStatRecord(resources[currentResource].name, fields)
+		scope, values, err := parsePressureStatRecord(resources[currentResource].name, line)
 		if err != nil {
 			return nil, err
 		}
 
 		switch scope {
 		case "some":
-			resources[currentResource].some = values
+			resources[currentResource].stats.Some = values
 		case "full":
-			resources[currentResource].full = values
+			resources[currentResource].stats.Full = values
 		default:
 			return nil, fmt.Errorf("unexpected pressure stat scope %q for resource %q", scope, resources[currentResource].name)
 		}
@@ -157,9 +152,10 @@ func parsePressureStatFile(r io.Reader) ([]pressureStatResource, error) {
 	return resources, nil
 }
 
-func parsePressureStatRecord(resource string, fields []string) (string, *pressureStatValues, error) {
-	if len(fields) < 5 {
-		return "", nil, fmt.Errorf("unexpected pressure stat record for resource %q: %q", resource, strings.Join(fields, " "))
+func parsePressureStatRecord(resource, line string) (string, *procfs.PSILine, error) {
+	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return "", nil, fmt.Errorf("unexpected empty pressure stat record for resource %q", resource)
 	}
 
 	scope := fields[0]
@@ -167,30 +163,10 @@ func parsePressureStatRecord(resource string, fields []string) (string, *pressur
 		return "", nil, fmt.Errorf("unexpected pressure stat scope %q for resource %q", scope, resource)
 	}
 
-	values := &pressureStatValues{}
-
-	var hasTotal bool
-
-	for _, field := range fields[1:] {
-		key, value, ok := strings.Cut(field, "=")
-		if !ok {
-			return "", nil, fmt.Errorf("unexpected pressure stat field %q for resource %q", field, resource)
-		}
-
-		switch key {
-		case "total":
-			parsed, err := strconv.ParseUint(value, 10, 64)
-			if err != nil {
-				return "", nil, fmt.Errorf("parse total for resource %q: %w", resource, err)
-			}
-			values.total = parsed
-			hasTotal = true
-		}
+	psi := &procfs.PSILine{}
+	if _, err := fmt.Sscanf(line, fmt.Sprintf("%s avg10=%%f avg60=%%f avg300=%%f total=%%d", scope), &psi.Avg10, &psi.Avg60, &psi.Avg300, &psi.Total); err != nil {
+		return "", nil, fmt.Errorf("parse pressure stat record for resource %q: %w", resource, err)
 	}
 
-	if !hasTotal {
-		return "", nil, fmt.Errorf("incomplete pressure stat record for resource %q scope %q", resource, scope)
-	}
-
-	return scope, values, nil
+	return scope, psi, nil
 }
