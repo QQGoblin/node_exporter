@@ -52,6 +52,7 @@ type kvmGuestScanner struct {
 	executablePath func(procfs.Proc) (string, error)
 	cmdLine        func(procfs.Proc) ([]string, error)
 	status         func(procfs.Proc) (procfs.ProcStatus, error)
+	sMaps          func(procfs.Proc) (procfs.ProcSMapsRollup, error)
 }
 
 type kvmGuestCollector struct {
@@ -101,6 +102,7 @@ func newKVMGuestScanner(fs procfs.FS, logger *slog.Logger) *kvmGuestScanner {
 		executablePath: func(p procfs.Proc) (string, error) { return p.Executable() },
 		cmdLine:        func(p procfs.Proc) ([]string, error) { return p.CmdLine() },
 		status:         func(p procfs.Proc) (procfs.ProcStatus, error) { return p.NewStatus() },
+		sMaps:          func(p procfs.Proc) (procfs.ProcSMapsRollup, error) { return p.ProcSMapsRollup() },
 	}
 }
 
@@ -158,12 +160,18 @@ func (s *kvmGuestScanner) discover() ([]kvmGuestProcess, error) {
 			continue
 		}
 
+		sMaps, err := s.sMaps(proc)
+		if err != nil {
+			s.logger.Debug("failed to read smaps for process", "pid", proc.PID, "err", err)
+			continue
+		}
+
 		guests = append(guests, kvmGuestProcess{
 			pid:    proc.PID,
 			uuid:   matches[1],
 			vmSize: status.VmSize,
-			vmRSS:  status.VmRSS,
-			vmSwap: status.VmSwap,
+			vmRSS:  sMaps.Rss,
+			vmSwap: sMaps.Swap,
 		})
 	}
 

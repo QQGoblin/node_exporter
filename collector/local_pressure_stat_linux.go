@@ -24,7 +24,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"sort"
@@ -54,7 +53,7 @@ func init() {
 func NewPressureStatCollector(logger *slog.Logger) (Collector, error) {
 	return &pressureStatCollector{
 		total: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, pressureStatSubsystem, "seconds_total"),
+			prometheus.BuildFQName(namespace, pressureStatSubsystem, "total"),
 			"Total pressure stall time in seconds reported by /proc/pressure/stat.",
 			[]string{"resource", "scope"}, nil,
 		),
@@ -63,7 +62,7 @@ func NewPressureStatCollector(logger *slog.Logger) (Collector, error) {
 }
 
 func (c *pressureStatCollector) Update(ch chan<- prometheus.Metric) error {
-	resources, err := readPressureStat(procFilePath("pressure/stat"))
+	resources, err := pressureStat(procFilePath("pressure/stat"))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			c.logger.Debug("pressure stat information is unavailable, you need openEuler /proc/pressure/stat support")
@@ -81,7 +80,7 @@ func (c *pressureStatCollector) Update(ch chan<- prometheus.Metric) error {
 				continue
 			}
 
-			ch <- prometheus.MustNewConstMetric(c.total, prometheus.CounterValue, float64(values.Total)/1000.0/1000.0, resource.name, scope)
+			ch <- prometheus.MustNewConstMetric(c.total, prometheus.CounterValue, float64(values.Total), resource.name, scope)
 			foundResources++
 		}
 	}
@@ -94,18 +93,14 @@ func (c *pressureStatCollector) Update(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func readPressureStat(path string) ([]pressureStatResource, error) {
+func pressureStat(path string) ([]pressureStatResource, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	return parsePressureStatFile(file)
-}
-
-func parsePressureStatFile(r io.Reader) ([]pressureStatResource, error) {
-	scanner := bufio.NewScanner(r)
+	scanner := bufio.NewScanner(file)
 	resources := make([]pressureStatResource, 0)
 	currentResource := -1
 
@@ -116,7 +111,7 @@ func parsePressureStatFile(r io.Reader) ([]pressureStatResource, error) {
 		}
 
 		fields := strings.Fields(line)
-		if len(fields) == 1 && !strings.Contains(fields[0], "=") {
+		if len(fields) == 1 {
 			resources = append(resources, pressureStatResource{name: fields[0]})
 			currentResource = len(resources) - 1
 			continue
@@ -126,18 +121,18 @@ func parsePressureStatFile(r io.Reader) ([]pressureStatResource, error) {
 			return nil, fmt.Errorf("missing resource header before line %q", line)
 		}
 
-		scope, values, err := parsePressureStatRecord(resources[currentResource].name, line)
+		stallType, values, err := statRecord(resources[currentResource].name, line)
 		if err != nil {
 			return nil, err
 		}
 
-		switch scope {
+		switch stallType {
 		case "some":
 			resources[currentResource].stats.Some = values
 		case "full":
 			resources[currentResource].stats.Full = values
 		default:
-			return nil, fmt.Errorf("unexpected pressure stat scope %q for resource %q", scope, resources[currentResource].name)
+			return nil, fmt.Errorf("unexpected pressure stat scope %q for resource %q", stallType, resources[currentResource].name)
 		}
 	}
 
@@ -152,21 +147,21 @@ func parsePressureStatFile(r io.Reader) ([]pressureStatResource, error) {
 	return resources, nil
 }
 
-func parsePressureStatRecord(resource, line string) (string, *procfs.PSILine, error) {
+func statRecord(resource, line string) (string, *procfs.PSILine, error) {
 	fields := strings.Fields(line)
 	if len(fields) == 0 {
 		return "", nil, fmt.Errorf("unexpected empty pressure stat record for resource %q", resource)
 	}
 
-	scope := fields[0]
-	if scope != "some" && scope != "full" {
-		return "", nil, fmt.Errorf("unexpected pressure stat scope %q for resource %q", scope, resource)
+	stallType := fields[0]
+	if stallType != "some" && stallType != "full" {
+		return "", nil, fmt.Errorf("unexpected pressure stat scope %q for resource %q", stallType, resource)
 	}
 
 	psi := &procfs.PSILine{}
-	if _, err := fmt.Sscanf(line, fmt.Sprintf("%s avg10=%%f avg60=%%f avg300=%%f total=%%d", scope), &psi.Avg10, &psi.Avg60, &psi.Avg300, &psi.Total); err != nil {
+	if _, err := fmt.Sscanf(line, fmt.Sprintf("%s avg10=%%f avg60=%%f avg300=%%f total=%%d", stallType), &psi.Avg10, &psi.Avg60, &psi.Avg300, &psi.Total); err != nil {
 		return "", nil, fmt.Errorf("parse pressure stat record for resource %q: %w", resource, err)
 	}
 
-	return scope, psi, nil
+	return stallType, psi, nil
 }
