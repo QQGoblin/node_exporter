@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
+  "id": 4,
   "links": [],
   "panels": [
     {
@@ -770,10 +770,10 @@
             "type": "prometheus"
           },
           "editorMode": "code",
-          "expr": "node_memory_SwapTotal_bytes{job=\"static\",ip=~\"$host_ip\"}",
+          "expr": "node_memory_SwapTotal_bytes{job=\"static\",ip=~\"$host_ip\"} - node_memory_SwapFree_bytes{job=\"static\",ip=~\"$host_ip\"}",
           "hide": false,
           "instant": false,
-          "legendFormat": "swap-total-{{ip}}",
+          "legendFormat": "swap-used-{{ip}}",
           "range": true,
           "refId": "G"
         },
@@ -1281,32 +1281,7 @@
           },
           "unit": "none"
         },
-        "overrides": [
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "oomkill-10.51.200.91"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
@@ -1446,12 +1421,116 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 45
+      },
+      "id": 61,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.0",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(node_vmstat_workingset_refault_anon{job=\"static\",ip=~\"$host_ip\"}[$__rate_interval])",
+          "legendFormat": "anon-{{ip}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(node_vmstat_workingset_refault_file{job=\"static\",ip=~\"$host_ip\"}[$__rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "file-{{ip}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "refault 统计",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 53
       },
       "id": 54,
       "panels": [],
@@ -1520,7 +1599,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 46
+        "y": 54
       },
       "id": 55,
       "options": {
@@ -1624,7 +1703,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 46
+        "y": 54
       },
       "id": 56,
       "options": {
@@ -1728,7 +1807,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 54
+        "y": 62
       },
       "id": 57,
       "options": {
@@ -1831,7 +1910,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 54
+        "y": 62
       },
       "id": 59,
       "options": {
@@ -1923,7 +2002,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 62
+        "y": 70
       },
       "id": 58,
       "options": {
@@ -1958,7 +2037,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 78
       },
       "id": 53,
       "panels": [],
@@ -2020,40 +2099,15 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "µs"
         },
-        "overrides": [
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "swap-some-10.51.200.91"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 71
+        "y": 79
       },
       "id": 52,
       "options": {
@@ -2073,9 +2127,9 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate (node_pressure_cpu_waiting_seconds_total{job=\"static\",ip=~\"$host_ip\"}[$__rate_interval])",
+          "expr": "rate (node_pressure_cpu_waiting_total{job=\"static\",ip=~\"$host_ip\"}[$__rate_interval])",
           "hide": false,
-          "legendFormat": "cpu-some-{{ip}}",
+          "legendFormat": "cpu-{{ip}}",
           "range": true,
           "refId": "A"
         },
@@ -2084,10 +2138,10 @@
             "type": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate (node_pressure_memory_waiting_seconds_total{job=\"static\",ip=~\"$host_ip\"}[$__rate_interval])",
+          "expr": "rate (node_pressure_memory_waiting_total{job=\"static\",ip=~\"$host_ip\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
-          "legendFormat": "mem-some-{{ip}}",
+          "legendFormat": "mem-{{ip}}",
           "range": true,
           "refId": "B"
         },
@@ -2096,10 +2150,107 @@
             "type": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate (node_pressure_memory_stalled_seconds_total{job=\"static\",ip=~\"$host_ip\"}[$__rate_interval])",
+          "expr": "rate(node_pressure_stat_total{job=\"static\",ip=~\"$host_ip\",scope=\"some\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
-          "legendFormat": "mem-full-{{ip}}",
+          "legendFormat": "{{resource}}-{{ip}}",
+          "range": true,
+          "refId": "E"
+        }
+      ],
+      "title": "Host Waiting Pressure",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "µs"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 87
+      },
+      "id": 60,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate (node_pressure_memory_stalled_total{job=\"static\",ip=~\"$host_ip\"}[$__rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "mem-{{ip}}",
           "range": true,
           "refId": "C"
         },
@@ -2108,27 +2259,15 @@
             "type": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(node_pressure_stat_seconds_total{job=\"static\",ip=~\"$host_ip\",resource=\"swap\",scope=\"full\"}[$__rate_interval])",
+          "expr": "rate(node_pressure_stat_total{job=\"static\",ip=~\"$host_ip\",scope=\"full\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
-          "legendFormat": "swap-full-{{ip}}",
+          "legendFormat": "{{resource}}-{{ip}}",
           "range": true,
           "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "rate(node_pressure_stat_seconds_total{job=\"static\",ip=~\"$host_ip\",resource=\"swap\",scope=\"some\"}[$__rate_interval])",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "swap-some-{{ip}}",
-          "range": true,
-          "refId": "E"
         }
       ],
-      "title": "Host Pressure",
+      "title": "Host Stalled Pressure",
       "type": "timeseries"
     }
   ],
@@ -2140,7 +2279,9 @@
     "list": [
       {
         "current": {
-          "text": "All",
+          "text": [
+            "All"
+          ],
           "value": [
             "$__all"
           ]
@@ -2190,6 +2331,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Host Monitor",
-  "version": 43
+  "title": "Host",
+  "uid": "2953dca0-469a-413d-ae4f-fd5b255a612d",
+  "version": 15
 }
