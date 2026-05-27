@@ -14,7 +14,7 @@ ExecStart=/usr/local/bin/host_monitor $OPTIONS \
 --collector.cpu \
 --collector.meminfo \
 --collector.vmstat \
---collector.vmstat.fields=^(oom_kill|pg.*fault|pswp|pgscan|pgsteal).* \
+--collector.vmstat.fields=^(oom_kill|workingset|pg.*fault|pswp|pgscan|pgsteal).* \
 --collector.loadavg \
 --collector.pressure \
 --collector.diskstats \
