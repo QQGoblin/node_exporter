@@ -20,7 +20,8 @@ ExecStart=/usr/local/bin/host_monitor $OPTIONS \
 --collector.diskstats \
 --collector.diskstats.device-include=^(sda|sdb|sdc|nvme.*)$ \
 --collector.kvm_guest \
---collector.pressure_stat
+--collector.pressure_stat \
+--collector.damon_reclaim
 
 
 [Install]
