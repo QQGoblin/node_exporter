@@ -41,14 +41,14 @@ var damonReclaimMetrics = []struct {
 }{
 	{
 		fileName:        "bytes_reclaimed_regions",
-		metricName:      "bytes_reclaimed_total",
+		metricName:      "bytes_total",
 		help:            "Total bytes of memory successfully reclaimed by DAMON reclaim.",
 		valueType:       prometheus.CounterValue,
 		scaleByAddrUnit: true,
 	},
 	{
 		fileName:        "bytes_reclaim_tried_regions",
-		metricName:      "bytes_reclaim_tried_total",
+		metricName:      "bytes_tried_total",
 		help:            "Total bytes of memory DAMON reclaim attempted to reclaim.",
 		valueType:       prometheus.CounterValue,
 		scaleByAddrUnit: true,
@@ -61,13 +61,13 @@ var damonReclaimMetrics = []struct {
 	},
 	{
 		fileName:   "nr_reclaimed_regions",
-		metricName: "reclaimed_regions_total",
+		metricName: "regions_total",
 		help:       "Total number of memory regions successfully reclaimed by DAMON reclaim.",
 		valueType:  prometheus.CounterValue,
 	},
 	{
 		fileName:   "nr_reclaim_tried_regions",
-		metricName: "reclaim_tried_regions_total",
+		metricName: "tried_regions_total",
 		help:       "Total number of memory regions DAMON reclaim attempted to reclaim.",
 		valueType:  prometheus.CounterValue,
 	},
