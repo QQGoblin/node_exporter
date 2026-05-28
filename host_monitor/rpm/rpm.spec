@@ -49,10 +49,12 @@ rm -rf $RPM_BUILD_ROOT
 %dir /etc/rcos_global/port_whitelist/
 
 %post
-systemctl daemon-reload
+systemctl daemon-reload >/dev/null 2>&1 || true
 
-systemctl enable host-monitor.socket
-systemctl enable host-monitor.service --now
+systemctl enable host-monitor.socket >/dev/null 2>&1 || true
+systemctl enable host-monitor.service >/dev/null 2>&1 || true
+systemctl stop host-monitor.socket >/dev/null 2>&1 || true
+systemctl restart host-monitor.socket >/dev/null 2>&1 || true
 
 %preun
 if [ $1 -eq 0 ] ; then
