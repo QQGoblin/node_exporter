@@ -22,6 +22,7 @@ package collector
 
 import (
 	"fmt"
+	"github.com/prometheus/node_exporter/collector/utils/cgroup1"
 	"log/slog"
 	"regexp"
 	"strconv"
@@ -38,11 +39,18 @@ var (
 )
 
 type kvmGuestProcess struct {
-	pid    int
-	uuid   string
-	vmSize uint64
-	vmRSS  uint64
-	vmSwap uint64
+	pid          int
+	uuid         string
+	rss          uint64
+	cache        uint64
+	swap         uint64
+	swapCached   uint64
+	inactiveFile uint64
+	activeFile   uint64
+	inactiveAnon uint64
+	activeAnon   uint64
+	unevictable  uint64
+	pgMajFault   uint64
 }
 
 type kvmGuestScanner struct {
@@ -56,10 +64,17 @@ type kvmGuestScanner struct {
 }
 
 type kvmGuestCollector struct {
-	scanner *kvmGuestScanner
-	vmSize  *prometheus.Desc
-	vmRSS   *prometheus.Desc
-	vmSwap  *prometheus.Desc
+	scanner      *kvmGuestScanner
+	rss          *prometheus.Desc
+	cache        *prometheus.Desc
+	swap         *prometheus.Desc
+	swapCached   *prometheus.Desc
+	inactiveFile *prometheus.Desc
+	activeFile   *prometheus.Desc
+	inactiveAnon *prometheus.Desc
+	activeAnon   *prometheus.Desc
+	unevictable  *prometheus.Desc
+	pgMajFault   *prometheus.Desc
 }
 
 func init() {
@@ -76,19 +91,54 @@ func NewKVMGuestCollector(logger *slog.Logger) (Collector, error) {
 	subsystem := "kvm_guest"
 	return &kvmGuestCollector{
 		scanner: newKVMGuestScanner(fs, logger),
-		vmSize: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "vm_size_bytes"),
-			"Virtual memory size in bytes for a KVM guest process.",
+		rss: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, "guest_rss_bytes"),
+			"Rss memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
-		vmRSS: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "vm_rss_bytes"),
-			"Resident memory size in bytes for a KVM guest process.",
+		cache: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, "guest_cache_bytes"),
+			"Cache memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
-		vmSwap: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "vm_swap_bytes"),
-			"Swapped memory size in bytes for a KVM guest process.",
+		swap: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, "guest_swap_bytes"),
+			"Swapped memory size in bytes for a KVM guest cgroup1 memory stats.",
+			[]string{"pid", "uuid"}, nil,
+		),
+		swapCached: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, "guest_swapCached_bytes"),
+			"SwapCached memory size in bytes for a KVM guest cgroup1 memory stats.",
+			[]string{"pid", "uuid"}, nil,
+		),
+		inactiveFile: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, "guest_inactiveFile_bytes"),
+			"InactiveFile memory size in bytes for a KVM guest cgroup1 memory stats.",
+			[]string{"pid", "uuid"}, nil,
+		),
+		activeFile: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, "guest_activeFile_bytes"),
+			"ActiveFile memory size in bytes for a KVM guest cgroup1 memory stats.",
+			[]string{"pid", "uuid"}, nil,
+		),
+		inactiveAnon: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, "guest_inactiveAnon_bytes"),
+			"InactiveAnon memory size in bytes for a KVM guest cgroup1 memory stats.",
+			[]string{"pid", "uuid"}, nil,
+		),
+		activeAnon: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, "guest_activeAnon_bytes"),
+			"ActiveAnon memory size in bytes for a KVM guest cgroup1 memory stats.",
+			[]string{"pid", "uuid"}, nil,
+		),
+		unevictable: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, "guest_unevictable_bytes"),
+			"Unevictable memory size in bytes for a KVM guest cgroup1 memory stats.",
+			[]string{"pid", "uuid"}, nil,
+		),
+		pgMajFault: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, "guest_pgMajFault_total"),
+			"PgMajFault memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
 	}, nil
@@ -117,9 +167,16 @@ func (c *kvmGuestCollector) Update(ch chan<- prometheus.Metric) error {
 
 	for _, guest := range guests {
 		pid := strconv.Itoa(guest.pid)
-		ch <- prometheus.MustNewConstMetric(c.vmSize, prometheus.GaugeValue, float64(guest.vmSize), pid, guest.uuid)
-		ch <- prometheus.MustNewConstMetric(c.vmRSS, prometheus.GaugeValue, float64(guest.vmRSS), pid, guest.uuid)
-		ch <- prometheus.MustNewConstMetric(c.vmSwap, prometheus.GaugeValue, float64(guest.vmSwap), pid, guest.uuid)
+		ch <- prometheus.MustNewConstMetric(c.rss, prometheus.GaugeValue, float64(guest.rss), pid, guest.uuid)
+		ch <- prometheus.MustNewConstMetric(c.cache, prometheus.GaugeValue, float64(guest.cache), pid, guest.uuid)
+		ch <- prometheus.MustNewConstMetric(c.swap, prometheus.GaugeValue, float64(guest.swap), pid, guest.uuid)
+		ch <- prometheus.MustNewConstMetric(c.swapCached, prometheus.GaugeValue, float64(guest.swapCached), pid, guest.uuid)
+		ch <- prometheus.MustNewConstMetric(c.inactiveAnon, prometheus.GaugeValue, float64(guest.inactiveAnon), pid, guest.uuid)
+		ch <- prometheus.MustNewConstMetric(c.activeAnon, prometheus.GaugeValue, float64(guest.activeAnon), pid, guest.uuid)
+		ch <- prometheus.MustNewConstMetric(c.inactiveFile, prometheus.GaugeValue, float64(guest.inactiveFile), pid, guest.uuid)
+		ch <- prometheus.MustNewConstMetric(c.activeFile, prometheus.GaugeValue, float64(guest.activeFile), pid, guest.uuid)
+		ch <- prometheus.MustNewConstMetric(c.unevictable, prometheus.GaugeValue, float64(guest.unevictable), pid, guest.uuid)
+		ch <- prometheus.MustNewConstMetric(c.pgMajFault, prometheus.GaugeValue, float64(guest.pgMajFault), pid, guest.uuid)
 	}
 
 	return nil
@@ -154,24 +211,25 @@ func (s *kvmGuestScanner) discover() ([]kvmGuestProcess, error) {
 			continue
 		}
 
-		status, err := s.status(proc)
-		if err != nil {
-			s.logger.Debug("failed to read status for process", "pid", proc.PID, "err", err)
-			continue
-		}
-
-		sMaps, err := s.sMaps(proc)
+		status, err := cgroup1.MemoryStatByPid(proc.PID)
 		if err != nil {
 			s.logger.Debug("failed to read smaps for process", "pid", proc.PID, "err", err)
 			continue
 		}
 
 		guests = append(guests, kvmGuestProcess{
-			pid:    proc.PID,
-			uuid:   matches[1],
-			vmSize: status.VmSize,
-			vmRSS:  sMaps.Rss,
-			vmSwap: sMaps.Swap,
+			pid:          proc.PID,
+			uuid:         matches[1],
+			rss:          status.TotalRSS,
+			cache:        status.TotalCache,
+			swap:         status.TotalSwap,
+			swapCached:   status.TotalSwapCached,
+			inactiveFile: status.TotalInactiveFile,
+			activeFile:   status.TotalActiveFile,
+			inactiveAnon: status.TotalInactiveAnon,
+			activeAnon:   status.TotalActiveAnon,
+			unevictable:  status.TotalUnevictable,
+			pgMajFault:   status.TotalPgMajFault,
 		})
 	}
 
