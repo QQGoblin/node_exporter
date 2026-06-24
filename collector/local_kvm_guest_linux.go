@@ -92,53 +92,53 @@ func NewKVMGuestCollector(logger *slog.Logger) (Collector, error) {
 	return &kvmGuestCollector{
 		scanner: newKVMGuestScanner(fs, logger),
 		rss: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "guest_rss_bytes"),
+			prometheus.BuildFQName(namespace, subsystem, "rss_bytes"),
 			"Rss memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
 		cache: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "guest_cache_bytes"),
+			prometheus.BuildFQName(namespace, subsystem, "cache_bytes"),
 			"Cache memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
 		swap: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "guest_swap_bytes"),
+			prometheus.BuildFQName(namespace, subsystem, "swap_bytes"),
 			"Swapped memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
 		swapCached: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "guest_swapCached_bytes"),
+			prometheus.BuildFQName(namespace, subsystem, "swapCached_bytes"),
 			"SwapCached memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
 		inactiveFile: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "guest_inactiveFile_bytes"),
+			prometheus.BuildFQName(namespace, subsystem, "inactiveFile_bytes"),
 			"InactiveFile memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
 		activeFile: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "guest_activeFile_bytes"),
+			prometheus.BuildFQName(namespace, subsystem, "activeFile_bytes"),
 			"ActiveFile memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
 		inactiveAnon: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "guest_inactiveAnon_bytes"),
+			prometheus.BuildFQName(namespace, subsystem, "inactiveAnon_bytes"),
 			"InactiveAnon memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
 		activeAnon: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "guest_activeAnon_bytes"),
+			prometheus.BuildFQName(namespace, subsystem, "activeAnon_bytes"),
 			"ActiveAnon memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
 		unevictable: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "guest_unevictable_bytes"),
+			prometheus.BuildFQName(namespace, subsystem, "unevictable_bytes"),
 			"Unevictable memory size in bytes for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
 		pgMajFault: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "guest_pgMajFault_total"),
-			"PgMajFault memory size in bytes for a KVM guest cgroup1 memory stats.",
+			prometheus.BuildFQName(namespace, subsystem, "pgMajFault_total"),
+			"Major page faults for a KVM guest cgroup1 memory stats.",
 			[]string{"pid", "uuid"}, nil,
 		),
 	}, nil
@@ -176,7 +176,7 @@ func (c *kvmGuestCollector) Update(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(c.inactiveFile, prometheus.GaugeValue, float64(guest.inactiveFile), pid, guest.uuid)
 		ch <- prometheus.MustNewConstMetric(c.activeFile, prometheus.GaugeValue, float64(guest.activeFile), pid, guest.uuid)
 		ch <- prometheus.MustNewConstMetric(c.unevictable, prometheus.GaugeValue, float64(guest.unevictable), pid, guest.uuid)
-		ch <- prometheus.MustNewConstMetric(c.pgMajFault, prometheus.GaugeValue, float64(guest.pgMajFault), pid, guest.uuid)
+		ch <- prometheus.MustNewConstMetric(c.pgMajFault, prometheus.CounterValue, float64(guest.pgMajFault), pid, guest.uuid)
 	}
 
 	return nil
